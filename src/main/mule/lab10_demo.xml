@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd">
+	<flow name="lab10_demoFlow" doc:id="10a7e006-1001-4ff1-b978-041793356f6a" >
+		<http:listener doc:name="Listener" doc:id="243adecf-b5b1-44e4-ae87-40ff485e3ccf" path="/lab10" config-ref="HTTP_Listener_config"/>
+		<logger level="INFO" doc:name="Logger" doc:id="bbef9125-b82d-44f4-8691-167d94208ff5" message="Flow started"/>
+		<sftp:read doc:name="Read" doc:id="03e50db6-e30d-4dd7-9498-2ddb6096a583" config-ref="SFTP_Config" path="UserData.csv" target="userData"/>
+		<ee:transform doc:name="Transform Message" doc:id="40942df2-86fc-487e-903c-6f9b631ce882">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.userData map (val,index) -> {
+	
+	COR_ID : correlationId,
+	Email : val.email,
+	Phone : val.phone,
+	Title : val.title
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[attributes.localAddress]" doc:name="Set Variable" doc:id="2d5192a7-41d6-42e3-b575-7652a1e82ab5" variableName="Local_IP"/>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="48371736-9dba-49cd-bd6d-d285ac31d98f" config-ref="MainDB">
+			<db:sql ><![CDATA[INSERT INTO craftdb.std_data(COR_ID,Email,Phone,Title)
+VALUES(:COR_ID,:Email,:Phone,:Title);]]></db:sql>
+		</db:bulk-insert>
+		<ee:transform doc:name="Transform Message" doc:id="2828925d-81e3-4e1d-ada3-81c1efa07537" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Msg":"Data Added",
+	"count": sizeOf(vars.userData),
+	"serverIP": vars.Local_IP
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="lab10_demoFlow1" doc:id="df0031b7-5753-4d4f-afd3-f0a3f11b5afa" >
+		<db:listener doc:name="On Table Row" doc:id="92d64a0d-3031-4507-b55e-5e864dba3576" config-ref="MainDB" table="std_data" watermarkColumn="id" idColumn="id">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</db:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="9fdd374c-e568-40d8-ab75-0dbde06a8b21" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="44a6e75c-05c9-4b47-ae37-8f6171b3c208" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="75a1cda0-61b8-4dad-850f-e3d943e2649f" >
+			<when expression='#[payload.title == "Dr"]'>
+				<db:insert doc:name="Insert" doc:id="b887ba04-2b54-453d-a392-5b0259f15230" config-ref="MainDB">
+					<db:sql ><![CDATA[INSERT INTO tb_sdt_data(Email,Phone,Title)
+VALUES(:email,:phone,:title);]]></db:sql>
+				</db:insert>
+				<logger level="INFO" doc:name="Logger" doc:id="8dae39de-5446-4a2d-97d1-68dd1b7437ca" message='#[%dw 2.0
+output application/json
+---
+{
+	"Msg":"Data Inserted!"
+}]'/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="70d987c5-6f97-480b-8357-b4025920186d" message='#["Try Again!"]'/>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>

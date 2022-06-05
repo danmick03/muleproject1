@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="fc9fab33-4ba0-4a08-984f-f8a95870213a" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="MainDB" doc:name="Database Config" doc:id="f70b3cbf-c3b1-4350-9be4-e44ca8f08c89" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="password" database="craftdb"/>
+	</db:config>
+	<sftp:config name="SFTP_Config" doc:name="SFTP Config" doc:id="b683c2c8-0654-4210-8de8-597b603fe3e4" >
+		<sftp:connection host="172.18.144.1 " port="26" username="tester" password="password" workingDir="batch25"/>
+	</sftp:config>
+</mule>
